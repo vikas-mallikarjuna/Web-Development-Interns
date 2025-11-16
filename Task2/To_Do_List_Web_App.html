@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vanilla JS To‑Do App</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--accent:#60a5fa;--success:#34d399;--danger:#fb7185;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      background: linear-gradient(180deg,#071020 0%, #071321 60%);
+      color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:24px;
+    }
+    .app{
+      width:100%;max-width:720px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:14px;padding:20px;box-shadow:0 6px 30px rgba(2,6,23,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    header h1{font-size:18px;margin:0}
+    .meta{color:var(--muted);font-size:13px}
+
+    .input-row{display:flex;gap:10px;margin-bottom:14px}
+    .input-row input{
+      flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;font-size:15px;outline:none
+    }
+    .input-row button{
+      padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,var(--accent),#3b82f6);color:#022;cursor:pointer;font-weight:600
+    }
+    .input-row button:active{transform:translateY(1px)}
+
+    #todo-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    .task{
+      display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)
+    }
+    .task .left{display:flex;align-items:center;gap:12px;flex:1}
+    .checkbox{
+      width:18px;height:18px;border-radius:6px;border:2px solid rgba(255,255,255,0.08);display:inline-grid;place-items:center;cursor:pointer
+    }
+    .checkbox.checked{background:var(--success);border-color:transparent}
+    .text{font-size:15px}
+    .text.completed{opacity:0.6;text-decoration:line-through}
+    .controls{display:flex;gap:8px}
+    .btn{border:none;padding:8px 10px;border-radius:8px;cursor:pointer;background:transparent;color:var(--muted)}
+    .btn.delete{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.03)}
+
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:13px}
+    .filters{display:flex;gap:8px}
+    .filter{cursor:pointer;padding:6px 8px;border-radius:8px}
+    .filter.active{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+
+    /* Empty state */
+    .empty{padding:22px;border-radius:10px;text-align:center;color:var(--muted);background:linear-gradient(180deg, rgba(255,255,255,0.01),transparent)}
+
+    @media (max-width:520px){.app{padding:14px}.input-row button{padding:10px}}
+  </style>
+</head>
+<body>
+  <main class="app" role="application" aria-labelledby="title">
+    <header>
+      <div>
+        <h1 id="title">To‑Do List (Vanilla JS)</h1>
+        <div class="meta">Add tasks, mark complete, delete. No page reloads — instant UI updates.</div>
+      </div>
+    </header>
+
+    <section class="input-row" aria-label="Add task">
+      <input id="task-input" type="text" placeholder="Type a new task and press Add or Enter" aria-label="New task" />
+      <button id="add-btn" aria-label="Add task">Add</button>
+    </section>
+
+    <ul id="todo-list" aria-live="polite"></ul>
+
+    <div id="empty" class="empty" hidden>
+      No tasks yet — add your first one above.
+    </div>
+
+    <div class="footer">
+      <div id="count">0 tasks</div>
+      <div class="filters" role="tablist">
+        <div class="filter active" data-filter="all" role="tab">All</div>
+        <div class="filter" data-filter="active" role="tab">Active</div>
+        <div class="filter" data-filter="completed" role="tab">Completed</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Simple ToDo app (Vanilla JS)
+    (function(){
+      const input = document.getElementById('task-input');
+      const addBtn = document.getElementById('add-btn');
+      const list = document.getElementById('todo-list');
+      const emptyEl = document.getElementById('empty');
+      const countEl = document.getElementById('count');
+      const filters = document.querySelectorAll('.filter');
+
+      let todos = []; // {id, text, done}
+      let filter = 'all';
+      const STORAGE_KEY = 'vanilla_todo_v1';
+
+      // --- Persistence ---
+      function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(todos)); }
+      function load(){
+        try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) todos = JSON.parse(raw); }catch(e){todos=[]}
+      }
+
+      // --- Rendering ---
+      function render(){
+        // apply filter
+        const shown = todos.filter(t => filter === 'all' ? true : (filter === 'active' ? !t.done : t.done));
+        list.innerHTML = '';
+        if(shown.length === 0){ emptyEl.hidden = false; } else { emptyEl.hidden = true; }
+
+        for(const t of shown){
+          const li = document.createElement('li'); li.className='task'; li.dataset.id = t.id;
+
+          const left = document.createElement('div'); left.className='left';
+
+          const checkbox = document.createElement('button');
+          checkbox.className='checkbox'+(t.done? ' checked':'');
+          checkbox.setAttribute('aria-label', t.done ? 'Mark as not done' : 'Mark as done');
+          checkbox.title = checkbox.getAttribute('aria-label');
+
+          const span = document.createElement('span'); span.className='text'+(t.done? ' completed':''); span.textContent = t.text;
+          span.setAttribute('tabindex','0'); // allow keyboard focus for toggling
+          span.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') toggleDone(t.id); });
+
+          left.appendChild(checkbox); left.appendChild(span);
+
+          const controls = document.createElement('div'); controls.className='controls';
+          const del = document.createElement('button'); del.className='btn delete'; del.textContent='Delete'; del.setAttribute('aria-label','Delete task');
+
+          controls.appendChild(del);
+          li.appendChild(left); li.appendChild(controls);
+
+          // attach simple handlers
+          checkbox.addEventListener('click', ()=> toggleDone(t.id));
+          span.addEventListener('click', ()=> toggleDone(t.id));
+          del.addEventListener('click', ()=> removeTask(t.id));
+
+          list.appendChild(li);
+        }
+
+        countEl.textContent = `${todos.length} task${todos.length!==1?'s':''}`;
+        // mark active filter button
+        document.querySelectorAll('.filter').forEach(f=> f.classList.toggle('active', f.dataset.filter===filter));
+      }
+
+      // --- Actions ---
+      function addTask(text){
+        const trimmed = text.trim(); if(!trimmed) return;
+        const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+        todos.unshift({id, text:trimmed, done:false});
+        save(); render(); input.value=''; input.focus();
+      }
+      function removeTask(id){ todos = todos.filter(t=>t.id!==id); save(); render(); }
+      function toggleDone(id){ todos = todos.map(t=> t.id===id ? {...t, done: !t.done} : t); save(); render(); }
+
+      // --- UI events ---
+      addBtn.addEventListener('click', ()=> addTask(input.value));
+      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') addTask(input.value); });
+
+      document.querySelectorAll('.filter').forEach(f=> f.addEventListener('click', ()=>{ filter = f.dataset.filter; render(); }));
+
+      // allow delete all completed with a keyboard shortcut (Ctrl+K)
+      window.addEventListener('keydown', (e)=>{
+        if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){
+          // remove completed
+          todos = todos.filter(t=>!t.done); save(); render();
+        }
+      });
+
+      // init
+      load(); render();
+
+      // expose helpers for debugging in console
+      window._todo = {get:()=>todos, add:addTask, remove:removeTask, toggle:toggleDone, save, load};
+    })();
+  </script>
+</body>
+</html>
