@@ -1,0 +1,24 @@
+{
+  "name": "eleate-labs-tasks",
+  "version": "1.0.0",
+  "description": "This project is a simple and responsive **Landing Page** created using only **one HTML file** (`index.html`) that includes both **HTML and CSS** in the same file using `<style>` tags.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikas-mallikarjuna/Web-Development-Interns.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vikas-mallikarjuna/Web-Development-Interns/issues"
+  },
+  "homepage": "https://github.com/vikas-mallikarjuna/Web-Development-Interns#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
